@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { CountryData, StateData, Facility } from '../types';
-import { NationalIndiaMap } from './NationalIndiaMap';
 import { FacilityReportModal } from './FacilityReportModal';
 import {
   Pill,
@@ -40,7 +39,6 @@ export const OverviewHome: React.FC<OverviewHomeProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [activeSimulationToast, setActiveSimulationToast] = useState<string | null>(null);
   const [selectedFacilityForReport, setSelectedFacilityForReport] = useState<Facility | null>(null);
-  const [selectedMapStateId, setSelectedMapStateId] = useState<string | null>(null);
 
   // Aggregate stats across India
   const totalStates = currentCountry.states.length;
@@ -329,17 +327,7 @@ export const OverviewHome: React.FC<OverviewHomeProps> = ({
         </div>
       </div>
 
-      {/* 2. National India Health Telemetry Map */}
-      <NationalIndiaMap
-        states={currentCountry.states}
-        selectedStateId={selectedMapStateId}
-        onSelectState={(stId) => {
-          setSelectedMapStateId(stId);
-          onNavigate('medicines', stId);
-        }}
-      />
-
-      {/* 3. Interactive State Surveillance Console (Click any Indian state to drill down) */}
+      {/* 2. Interactive State Surveillance Console (Click any Indian state to drill down) */}
       <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -353,7 +341,7 @@ export const OverviewHome: React.FC<OverviewHomeProps> = ({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 max-h-[480px] overflow-y-auto pr-1">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 max-h-[520px] overflow-y-auto pr-1">
           {currentCountry.states.map((st) => {
             const hasStockout = st.activeStockoutAlerts > 0;
             const hasBedAlert = st.activeBedAlerts > 0;
@@ -399,245 +387,70 @@ export const OverviewHome: React.FC<OverviewHomeProps> = ({
         </div>
       </div>
 
-      {/* 4. The 4 Core Functional Views */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
-        {/* Box 1: Medicine Stock & Demand Forecast */}
-        <div
-          id="box-medicine-forecast"
-          onClick={() => onNavigate('medicines')}
-          className="group relative bg-white hover:bg-slate-50/60 border border-slate-200 hover:border-indigo-400 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col justify-between"
-        >
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 group-hover:scale-105 transition-transform">
-                <Pill className="w-6 h-6" />
+      {/* 3. BRICS Cross-Border Health Grid & Privacy Guard Section */}
+      <div
+        id="box-brics-crossborder"
+        onClick={() => onNavigate('brics')}
+        className="group relative bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl p-6 sm:p-7 shadow-lg hover:shadow-xl border border-indigo-500/30 hover:border-indigo-400 transition-all duration-200 cursor-pointer flex flex-col justify-between"
+      >
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-indigo-500/20 border border-indigo-400/40 flex items-center justify-center text-indigo-300 group-hover:scale-105 transition-transform">
+                <Globe className="w-6 h-6" />
               </div>
-              <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                Live Inventory & AI Forecast
+              <div className="flex items-center gap-1.5 text-lg">
+                <span>🇮🇳</span>
+                <span>🇧🇷</span>
+                <span>🇿🇦</span>
+                <span>🇨🇳</span>
+                <span>🇷🇺</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                Zero Raw-Data Sharing (DPDP 🇮🇳 • LGPD 🇧🇷 • POPIA 🇿🇦)
               </span>
-            </div>
-
-            <div>
-              <h2 className="text-lg font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">
-                Medicine Stock & Demand Forecast
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-500 mt-1.5 leading-relaxed">
-                State-to-district-to-PHC drilldown with interactive geographic maps. Highlights beeping critical PHC facilities needing stock attention and generates Gemini AI 30-day demand forecasts.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 pt-2 text-xs">
-              <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
-                <span className="text-slate-500 block text-[10px]">Stockout Detection</span>
-                <span className="font-semibold text-rose-600 font-mono">Days of Supply (DOS)</span>
-              </div>
-              <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
-                <span className="text-slate-500 block text-[10px]">AI Forecasting</span>
-                <span className="font-semibold text-emerald-700 font-mono">Gemini 3.7 Engine</span>
-              </div>
+              <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-indigo-400/20 text-indigo-200 border border-indigo-400/30">
+                20% Cross-Border Criteria
+              </span>
             </div>
           </div>
 
-          <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-indigo-600 group-hover:translate-x-1 transition-transform">
-            <span>Explore State & District Medicine Stock</span>
-            <ArrowRight className="w-4 h-4" />
+          <div>
+            <h2 className="text-xl font-bold text-white group-hover:text-indigo-200 transition-colors flex items-center gap-2">
+              <span>BRICS Cross-Border Health Grid & Privacy-Preserving AI</span>
+              <span className="text-xs font-mono px-2 py-0.5 rounded bg-white/10 text-indigo-200">Sovereign Architecture</span>
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-300 mt-1.5 leading-relaxed max-w-4xl">
+              Demonstrates realistic multi-nation operability across BRICS health systems (India's NHM, Brazil's SUS, South Africa's NHI, China's NHC, Russia's Minzdrav). Employs WHO ATC medicine standardization, Differential Privacy federated learning (ε=0.5), and zero-knowledge proofs for humanitarian aid without leaking any patient or clinic data.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 text-xs">
+            <div className="bg-white/5 backdrop-blur-xs p-3 rounded-xl border border-white/10">
+              <span className="text-slate-400 block text-[10px]">Data Sovereignty</span>
+              <span className="font-semibold text-emerald-400 font-mono">0 Bytes Exported</span>
+            </div>
+            <div className="bg-white/5 backdrop-blur-xs p-3 rounded-xl border border-white/10">
+              <span className="text-slate-400 block text-[10px]">Privacy Bound</span>
+              <span className="font-semibold text-indigo-300 font-mono">ε = 0.5 (DP-SGD)</span>
+            </div>
+            <div className="bg-white/5 backdrop-blur-xs p-3 rounded-xl border border-white/10">
+              <span className="text-slate-400 block text-[10px]">Medicine Standard</span>
+              <span className="font-semibold text-blue-300 font-mono">WHO INN / ATC Codes</span>
+            </div>
+            <div className="bg-white/5 backdrop-blur-xs p-3 rounded-xl border border-white/10">
+              <span className="text-slate-400 block text-[10px]">Mutual Aid Corridor</span>
+              <span className="font-semibold text-amber-300 font-mono">zk-SNARK Verified</span>
+            </div>
           </div>
         </div>
 
-        {/* Box 2: Bed Availability & Staff Attendance */}
-        <div
-          id="box-bed-staff"
-          onClick={() => onNavigate('beds')}
-          className="group relative bg-white hover:bg-slate-50/60 border border-slate-200 hover:border-indigo-400 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col justify-between"
-        >
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 group-hover:scale-105 transition-transform">
-                <BedDouble className="w-6 h-6" />
-              </div>
-              <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
-                Real-Time Triage & Rosters
-              </span>
-            </div>
-
-            <div>
-              <h2 className="text-lg font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">
-                Bed Availability & Staff Attendance
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-500 mt-1.5 leading-relaxed">
-                Live monitoring of General, ICU, Maternity, and Oxygen beds across PHCs and CHCs. Tracks biometric medical staff attendance, doctor duty rosters, and patient triage stress points.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 pt-2 text-xs">
-              <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
-                <span className="text-slate-500 block text-[10px]">Bed Utilization</span>
-                <span className="font-semibold text-indigo-600 font-mono">ICU & O₂ Autonomy</span>
-              </div>
-              <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
-                <span className="text-slate-500 block text-[10px]">Biometric Attendance</span>
-                <span className="font-semibold text-emerald-700 font-mono">Duty Roster Grid</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-indigo-600 group-hover:translate-x-1 transition-transform">
-            <span>Inspect Bed & Staff Capacity</span>
-            <ArrowRight className="w-4 h-4" />
-          </div>
-        </div>
-
-        {/* Box 3: Smart Resource Redistribution */}
-        <div
-          id="box-redistribution"
-          onClick={() => onNavigate('redistribution')}
-          className="group relative bg-white hover:bg-slate-50/60 border border-slate-200 hover:border-indigo-400 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col justify-between"
-        >
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="w-12 h-12 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 group-hover:scale-105 transition-transform">
-                <Truck className="w-6 h-6" />
-              </div>
-              <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-                District-to-District Balancing
-              </span>
-            </div>
-
-            <div>
-              <h2 className="text-lg font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">
-                Smart Resource Redistribution
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-500 mt-1.5 leading-relaxed">
-                Automated inter-district stock equalization between surplus central warehouses and deficit rural grids. Calculates optimal transit batches, cold-chain transport modes, and safe buffers.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 pt-2 text-xs">
-              <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
-                <span className="text-slate-500 block text-[10px]">Logistics Routing</span>
-                <span className="font-semibold text-amber-600 font-mono">Cold-Chain Vans</span>
-              </div>
-              <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
-                <span className="text-slate-500 block text-[10px]">Surplus Equalization</span>
-                <span className="font-semibold text-emerald-700 font-mono">Zero Stockout Goal</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-indigo-600 group-hover:translate-x-1 transition-transform">
-            <span>Manage Inter-District Transfers</span>
-            <ArrowRight className="w-4 h-4" />
-          </div>
-        </div>
-
-        {/* Box 4: Predictive Outbreak Alerting and Emergency Coordination */}
-        <div
-          id="box-outbreak-alerting"
-          onClick={() => onNavigate('outbreak')}
-          className="group relative bg-indigo-900 text-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-200 cursor-pointer flex flex-col justify-between"
-        >
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="w-12 h-12 rounded-xl bg-indigo-800 border border-indigo-700 flex items-center justify-center text-rose-300 group-hover:scale-105 transition-transform">
-                <Radio className="w-6 h-6 animate-pulse" />
-              </div>
-              <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-white/10 backdrop-blur-xs text-rose-300 border border-white/10">
-                Epidemic Surveillance & Surge
-              </span>
-            </div>
-
-            <div>
-              <h2 className="text-lg font-bold text-white transition-colors">
-                Predictive Outbreak Alerting & Emergency Coordination
-              </h2>
-              <p className="text-xs sm:text-sm text-indigo-200/80 mt-1.5 leading-relaxed">
-                Early syndromic fever & waterborne cluster warning. Simulates epidemic surges, reserves emergency medicine kits, and coordinates automated containment actions.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 pt-2 text-xs">
-              <div className="bg-white/10 backdrop-blur-xs p-2.5 rounded-lg border border-white/10">
-                <span className="text-indigo-200 block text-[10px]">Surge Multiplier</span>
-                <span className="font-semibold text-rose-300 font-mono">3.4x Emergency Buffer</span>
-              </div>
-              <div className="bg-white/10 backdrop-blur-xs p-2.5 rounded-lg border border-white/10">
-                <span className="text-indigo-200 block text-[10px]">National Early Warning</span>
-                <span className="font-semibold text-indigo-200 font-mono">Real-Time Cluster Triage</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-6 pt-4 border-t border-indigo-800/80 flex items-center justify-between text-xs font-semibold text-indigo-200 group-hover:translate-x-1 transition-transform">
-            <span>Coordinate Outbreak Response</span>
-            <ArrowRight className="w-4 h-4" />
-          </div>
-        </div>
-
-        {/* Box 5: BRICS Cross-Border Health Grid & Privacy Guard (20% Evaluation Criteria) */}
-        <div
-          id="box-brics-crossborder"
-          onClick={() => onNavigate('brics')}
-          className="md:col-span-2 group relative bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl p-6 sm:p-7 shadow-lg hover:shadow-xl border border-indigo-500/30 hover:border-indigo-400 transition-all duration-200 cursor-pointer flex flex-col justify-between"
-        >
-          <div className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-indigo-500/20 border border-indigo-400/40 flex items-center justify-center text-indigo-300 group-hover:scale-105 transition-transform">
-                  <Globe className="w-6 h-6" />
-                </div>
-                <div className="flex items-center gap-1.5 text-lg">
-                  <span>🇮🇳</span>
-                  <span>🇧🇷</span>
-                  <span>🇿🇦</span>
-                  <span>🇨🇳</span>
-                  <span>🇷🇺</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 flex items-center gap-1.5">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  Zero Raw-Data Sharing (DPDP 🇮🇳 • LGPD 🇧🇷 • POPIA 🇿🇦)
-                </span>
-                <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-indigo-400/20 text-indigo-200 border border-indigo-400/30">
-                  20% Cross-Border Criteria
-                </span>
-              </div>
-            </div>
-
-            <div>
-              <h2 className="text-xl font-bold text-white group-hover:text-indigo-200 transition-colors flex items-center gap-2">
-                <span>BRICS Cross-Border Health Grid & Privacy-Preserving AI</span>
-                <span className="text-xs font-mono px-2 py-0.5 rounded bg-white/10 text-indigo-200">Sovereign Architecture</span>
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-300 mt-1.5 leading-relaxed max-w-4xl">
-                Demonstrates realistic multi-nation operability across BRICS health systems (India's NHM, Brazil's SUS, South Africa's NHI, China's NHC, Russia's Minzdrav). Employs WHO ATC medicine standardization, Differential Privacy federated learning (ε=0.5), and zero-knowledge proofs for humanitarian aid without leaking any patient or clinic data.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 text-xs">
-              <div className="bg-white/5 backdrop-blur-xs p-3 rounded-xl border border-white/10">
-                <span className="text-slate-400 block text-[10px]">Data Sovereignty</span>
-                <span className="font-semibold text-emerald-400 font-mono">0 Bytes Exported</span>
-              </div>
-              <div className="bg-white/5 backdrop-blur-xs p-3 rounded-xl border border-white/10">
-                <span className="text-slate-400 block text-[10px]">Privacy Bound</span>
-                <span className="font-semibold text-indigo-300 font-mono">ε = 0.5 (DP-SGD)</span>
-              </div>
-              <div className="bg-white/5 backdrop-blur-xs p-3 rounded-xl border border-white/10">
-                <span className="text-slate-400 block text-[10px]">Medicine Standard</span>
-                <span className="font-semibold text-blue-300 font-mono">WHO INN / ATC Codes</span>
-              </div>
-              <div className="bg-white/5 backdrop-blur-xs p-3 rounded-xl border border-white/10">
-                <span className="text-slate-400 block text-[10px]">Mutual Aid Corridor</span>
-                <span className="font-semibold text-amber-300 font-mono">zk-SNARK Verified</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between text-xs font-semibold text-indigo-300 group-hover:translate-x-1 transition-transform">
-            <span>Explore BRICS Multi-Nation Architecture & Privacy Guarantees</span>
-            <ArrowRight className="w-4 h-4" />
-          </div>
+        <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between text-xs font-semibold text-indigo-300 group-hover:translate-x-1 transition-transform">
+          <span>Explore BRICS Multi-Nation Architecture & Privacy Guarantees</span>
+          <ArrowRight className="w-4 h-4" />
         </div>
       </div>
 

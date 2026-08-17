@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
 import { StateData, District, Facility, MedicineStock } from '../types';
-import { StateMap } from './StateMap';
-import { DistrictMap } from './DistrictMap';
 import { FacilityReportModal } from './FacilityReportModal';
 import {
   Pill,
@@ -24,6 +22,8 @@ import {
   Warehouse,
   Flame,
   FileText,
+  MapPin,
+  Building2,
 } from 'lucide-react';
 
 interface MedicineStockViewProps {
@@ -42,7 +42,9 @@ export const MedicineStockView: React.FC<MedicineStockViewProps> = ({
   onTriggerRedistribution,
 }) => {
   const [selectedStateId, setSelectedStateId] = useState<string>(initialStateId || states[0]?.id || '');
-  const [selectedDistrictId, setSelectedDistrictId] = useState<string>(initialDistrictId || '');
+  const [selectedDistrictId, setSelectedDistrictId] = useState<string>(
+    initialDistrictId || states[0]?.districts[0]?.id || ''
+  );
   const [selectedFacilityId, setSelectedFacilityId] = useState<string>(initialFacilityId || '');
   const [selectedFacilityForReport, setSelectedFacilityForReport] = useState<Facility | null>(null);
 
@@ -65,7 +67,8 @@ export const MedicineStockView: React.FC<MedicineStockViewProps> = ({
   // Handle state change
   const handleStateChange = (stateId: string) => {
     setSelectedStateId(stateId);
-    setSelectedDistrictId('');
+    const targetState = states.find((s) => s.id === stateId);
+    setSelectedDistrictId(targetState?.districts[0]?.id || '');
     setSelectedFacilityId('');
     setAiForecastResult(null);
   };
@@ -205,7 +208,7 @@ export const MedicineStockView: React.FC<MedicineStockViewProps> = ({
               onChange={(e) => handleDistrictChange(e.target.value)}
               className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-lg px-3 py-2 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all cursor-pointer"
             >
-              <option value="">-- All Districts (State Map & Depot View) --</option>
+              <option value="">-- All Districts (State Level) --</option>
               {currentState?.districts.map((dist) => (
                 <option key={dist.id} value={dist.id}>
                   {dist.name} {dist.stockoutAlertCount > 0 ? `(${dist.stockoutAlertCount} Alert)` : '✓ Adequate'}
@@ -228,7 +231,7 @@ export const MedicineStockView: React.FC<MedicineStockViewProps> = ({
             >
               <option value="">
                 {currentDistrict
-                  ? '-- Choose PHC / CHC (or click node on map) --'
+                  ? '-- Choose PHC / CHC Center --'
                   : '-- Select District First --'}
               </option>
               {currentDistrict?.facilities.map((fac) => (
@@ -241,29 +244,10 @@ export const MedicineStockView: React.FC<MedicineStockViewProps> = ({
         </div>
       </div>
 
-      {/* 2. Interactive Map Section */}
-      {selectedDistrictId && currentDistrict ? (
-        <DistrictMap
-          district={currentDistrict}
-          stateName={currentState.name}
-          selectedFacilityId={selectedFacilityId}
-          onSelectFacility={handleFacilityChange}
-          onOpenFacilityReport={(fac) => setSelectedFacilityForReport(fac)}
-          mode="medicines"
-        />
-      ) : (
-        <StateMap
-          stateData={currentState}
-          selectedDistrictId={selectedDistrictId}
-          onSelectDistrict={handleDistrictChange}
-          mode="medicines"
-        />
-      )}
-
-      {/* 3. Facility Detail & Medicine Stock Surveillance */}
+      {/* Conditional View: If Facility is selected, show Facility Detail FIRST, followed by District Warehouse Buffer. Otherwise show Warehouse Buffer + Facility Grid */}
       {currentFacility ? (
         <div className="space-y-6">
-          {/* Facility Summary Card */}
+          {/* 1. Particular PHC / CHC Detail & Medicine Stock Surveillance */}
           <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100">
               <div>
@@ -289,6 +273,12 @@ export const MedicineStockView: React.FC<MedicineStockViewProps> = ({
                   >
                     <FileText className="w-3.5 h-3.5" />
                     <span>View Full Facility Report</span>
+                  </button>
+                  <button
+                    onClick={() => handleFacilityChange('')}
+                    className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                  >
+                    ← Back to {currentDistrict?.name || 'District'} Grid
                   </button>
                 </div>
                 <p className="text-xs text-slate-500 mt-1">
@@ -479,7 +469,7 @@ export const MedicineStockView: React.FC<MedicineStockViewProps> = ({
             </div>
           </div>
 
-          {/* AI Demand Forecast Output Card */}
+          {/* AI Demand Forecast Output Card (if generated) */}
           {aiForecastResult && (
             <div className="bg-white border border-indigo-200 rounded-2xl p-5 sm:p-6 shadow-md animate-fade-in">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 mb-4 gap-2">
@@ -542,89 +532,261 @@ export const MedicineStockView: React.FC<MedicineStockViewProps> = ({
               )}
             </div>
           )}
-        </div>
-      ) : (
-        /* State & District Wide Overview when no single facility is chosen */
-        <div className="space-y-6">
-          {/* District Central Warehouse Stock Status */}
-          {currentDistrict ? (
+
+          {/* 2. Below: District Central Medical Warehouse Buffer */}
+          {currentDistrict && (
             <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 mb-4 gap-2">
                 <div className="flex items-center gap-2">
                   <Warehouse className="w-5 h-5 text-indigo-600" />
-                  <h3 className="text-sm font-bold text-slate-900">
-                    {currentDistrict.name} Central Medical Warehouse Buffer
-                  </h3>
+                  <h2 className="text-base font-bold text-slate-900">
+                    {currentDistrict.name} District Central Medical Warehouse Buffer
+                  </h2>
                 </div>
-                <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold border ${currentDistrict.isSurplus ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
+                <span
+                  className={`text-xs px-2.5 py-0.5 rounded-full font-bold border self-start sm:self-auto ${
+                    currentDistrict.isSurplus
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      : 'bg-amber-50 text-amber-700 border-amber-200'
+                  }`}
+                >
                   {currentDistrict.isSurplus ? '✓ Surplus District Depot' : '⚠️ Deficit Buffer District'}
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+              <p className="text-xs text-slate-500 mb-3.5">
+                Central depot buffer reserve at {currentDistrict.headquarters} warehouse for rapid inter-facility restocking across {currentDistrict.name}.
+              </p>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8 gap-2.5 sm:gap-3">
                 {Object.entries(currentDistrict.centralWarehouseInventory).map(([item, qty]) => (
-                  <div key={item} className="bg-slate-50 p-3 rounded-xl border border-slate-200">
-                    <span className="text-[11px] text-slate-500 block truncate font-medium">{item}</span>
-                    <span className="text-base font-bold font-mono text-slate-800 mt-1 block">
-                      {qty.toLocaleString()} units
+                  <div key={item} className="bg-slate-50 p-3 rounded-xl border border-slate-200/90 flex flex-col justify-between">
+                    <span className="text-[11px] text-slate-600 font-semibold block leading-tight mb-1.5">{item}</span>
+                    <span className="text-sm sm:text-base font-bold font-mono text-slate-800">
+                      {qty.toLocaleString()} <span className="text-[10px] font-normal text-slate-500">units</span>
                     </span>
                   </div>
                 ))}
               </div>
             </div>
-          ) : null}
+          )}
+        </div>
+      ) : (
+        /* When NO facility is selected: Show Warehouse Buffer FIRST, then PHC & CHC Facility Grid */
+        <div className="space-y-6">
+          {/* 1. District Central Medical Warehouse Buffer */}
+          {currentDistrict && (
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 mb-4 gap-2">
+                <div className="flex items-center gap-2">
+                  <Warehouse className="w-5 h-5 text-indigo-600" />
+                  <h2 className="text-base font-bold text-slate-900">
+                    {currentDistrict.name} District Central Medical Warehouse Buffer
+                  </h2>
+                </div>
+                <span
+                  className={`text-xs px-2.5 py-0.5 rounded-full font-bold border self-start sm:self-auto ${
+                    currentDistrict.isSurplus
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      : 'bg-amber-50 text-amber-700 border-amber-200'
+                  }`}
+                >
+                  {currentDistrict.isSurplus ? '✓ Surplus District Depot' : '⚠️ Deficit Buffer District'}
+                </span>
+              </div>
 
-          {/* Quick Inspection List of All Monitored Facilities in State */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-sm font-bold text-slate-900">
-                  {currentState.name} Primary Care Facilities & Health Centers ({allFacilitiesInState.length})
-                </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Click any health centre below to inspect medicine inventory, days of supply, and generate AI demand projections.
-                </p>
+              <p className="text-xs text-slate-500 mb-3.5">
+                Central depot buffer reserve at {currentDistrict.headquarters} warehouse for rapid inter-facility restocking across {currentDistrict.name}.
+              </p>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8 gap-2.5 sm:gap-3">
+                {Object.entries(currentDistrict.centralWarehouseInventory).map(([item, qty]) => (
+                  <div key={item} className="bg-slate-50 p-3 rounded-xl border border-slate-200/90 flex flex-col justify-between">
+                    <span className="text-[11px] text-slate-600 font-semibold block leading-tight mb-1.5">{item}</span>
+                    <span className="text-sm sm:text-base font-bold font-mono text-slate-800">
+                      {qty.toLocaleString()} <span className="text-[10px] font-normal text-slate-500">units</span>
+                    </span>
+                  </div>
+                ))}
               </div>
             </div>
+          )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {allFacilitiesInState.map(({ district, facility }) => {
-                const isAlert = facility.medicineAlert;
-                return (
-                  <div
-                    key={facility.id}
-                    onClick={() => {
-                      setSelectedDistrictId(district.id);
-                      setSelectedFacilityId(facility.id);
-                    }}
-                    className={`p-4 rounded-xl border transition-all cursor-pointer ${
-                      isAlert
-                        ? 'bg-rose-50/30 border-rose-200 hover:border-rose-400 hover:shadow-md'
-                        : 'bg-white border-slate-200 hover:border-indigo-400 hover:shadow-md'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
-                        {facility.type}
-                      </span>
-                      {isAlert && (
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-700">
-                          {facility.medicineSeverity} ALERT
-                        </span>
-                      )}
-                    </div>
-                    <h4 className="text-xs font-bold text-slate-900 line-clamp-1">{facility.name}</h4>
-                    <p className="text-[11px] text-slate-500 mt-0.5">
-                      {district.name} • {facility.inchargeDoctor}
-                    </p>
-                    <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] font-semibold text-indigo-600">
-                      <span>View Medicine Stock ({facility.medicines.length} items)</span>
-                      <ArrowRight className="w-3 h-3" />
-                    </div>
-                  </div>
-                );
-              })}
+          {/* 2. District — PHC & CHC Facility Grid */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-slate-100">
+              <div>
+                <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-indigo-600" />
+                  <span>
+                    {selectedDistrictId && currentDistrict
+                      ? `${currentDistrict.name} District — PHC & CHC Facility Grid`
+                      : `${currentState.name} — District Logistics & Warehouse Hubs`}
+                  </span>
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {selectedDistrictId && currentDistrict
+                    ? `Showing all ${currentDistrict.facilities.length} primary health centers and community health centers in ${currentDistrict.name}. Click any facility to inspect stock & generate AI forecasts.`
+                    : `Select a district below or use the selector bar above to inspect local facility inventory.`}
+                </p>
+              </div>
+
+              {selectedDistrictId && (
+                <button
+                  onClick={() => handleDistrictChange('')}
+                  className="self-start sm:self-auto px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors border border-slate-200 cursor-pointer"
+                >
+                  ← View All {currentState.name} Districts
+                </button>
+              )}
             </div>
+
+            {/* If District selected, show its facilities */}
+            {selectedDistrictId && currentDistrict ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                {currentDistrict.facilities.map((fac) => {
+                  const isSelected = selectedFacilityId === fac.id;
+                  const criticalCount = fac.medicines.filter((m) => m.status === 'CRITICAL').length;
+                  return (
+                    <div
+                      key={fac.id}
+                      id={`facility-card-${fac.id}`}
+                      onClick={() => handleFacilityChange(fac.id)}
+                      className={`p-4 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
+                        isSelected
+                          ? 'bg-indigo-50/70 border-indigo-500 ring-2 ring-indigo-500/20 shadow-sm'
+                          : fac.medicineAlert
+                          ? 'bg-white border-rose-200 hover:border-rose-400 hover:shadow-sm'
+                          : 'bg-white border-slate-200 hover:border-indigo-300 hover:shadow-sm'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between gap-2 mb-2">
+                          <span
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                              fac.type === 'CHC'
+                                ? 'bg-purple-100 text-purple-800 border border-purple-200'
+                                : 'bg-indigo-100 text-indigo-800 border border-indigo-200'
+                            }`}
+                          >
+                            {fac.type}
+                          </span>
+                          {fac.medicineAlert ? (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-200 flex items-center gap-1">
+                              <AlertTriangle className="w-2.5 h-2.5" />
+                              <span>{fac.medicineSeverity} Stockout</span>
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                              <CheckCircle2 className="w-2.5 h-2.5" />
+                              <span>Adequate</span>
+                            </span>
+                          )}
+                        </div>
+
+                        <h3 className="text-sm font-bold text-slate-900 leading-snug">{fac.name}</h3>
+                        <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
+                          <User className="w-3 h-3 text-slate-400" />
+                          <span>{fac.inchargeDoctor}</span>
+                        </p>
+                        <p className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1">
+                          <Phone className="w-3 h-3 text-slate-400" />
+                          <span>{fac.contactPhone}</span>
+                        </p>
+
+                        <div className="mt-3 pt-2.5 border-t border-slate-100 grid grid-cols-2 gap-2 text-xs">
+                          <div>
+                            <span className="text-[10px] text-slate-400 block">Critical Drugs:</span>
+                            <span className={`font-mono font-bold ${criticalCount > 0 ? 'text-rose-600' : 'text-slate-700'}`}>
+                              {criticalCount} items &lt;48h
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-slate-400 block">Total Catalog:</span>
+                            <span className="font-mono font-bold text-slate-700">{fac.medicines.length} Essential Meds</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedFacilityForReport(fac);
+                          }}
+                          className="text-slate-500 hover:text-indigo-600 font-medium flex items-center gap-1 cursor-pointer"
+                        >
+                          <FileText className="w-3 h-3" />
+                          <span>Full Audit</span>
+                        </button>
+                        <span className={`font-bold flex items-center gap-1 ${isSelected ? 'text-indigo-700' : 'text-indigo-600'}`}>
+                          <span>{isSelected ? 'Active Selection' : 'Inspect Stock'}</span>
+                          <ArrowRight className="w-3 h-3" />
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              /* Show all Districts in State */
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                {currentState.districts.map((dist) => {
+                  const hasAlert = dist.stockoutAlertCount > 0;
+                  return (
+                    <div
+                      key={dist.id}
+                      id={`district-card-${dist.id}`}
+                      onClick={() => handleDistrictChange(dist.id)}
+                      className={`p-4 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
+                        hasAlert
+                          ? 'bg-white border-rose-200 hover:border-rose-400 hover:shadow-sm'
+                          : 'bg-white border-slate-200 hover:border-indigo-300 hover:shadow-sm'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-bold text-slate-800">{dist.name}</span>
+                          <span
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                              dist.isSurplus
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                : 'bg-amber-50 text-amber-700 border-amber-200'
+                            }`}
+                          >
+                            {dist.isSurplus ? 'Surplus Depot' : 'Deficit Grid'}
+                          </span>
+                        </div>
+
+                        <p className="text-xs text-slate-500 mb-3">HQ: {dist.headquarters}</p>
+
+                        <div className="space-y-1.5 text-xs bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="text-slate-500">Monitored Facilities:</span>
+                            <span className="font-mono font-bold text-slate-800">{dist.facilities.length} PHCs & CHCs</span>
+                          </div>
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="text-slate-500">Stockout Alerts:</span>
+                            <span className={`font-mono font-bold ${hasAlert ? 'text-rose-600' : 'text-emerald-600'}`}>
+                              {hasAlert ? `${dist.stockoutAlertCount} Critical` : '✓ Adequate'}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="text-slate-500">Central Depot:</span>
+                            <span className="font-medium text-slate-700 truncate max-w-[150px]">{dist.centralWarehouseName}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-indigo-600">
+                        <span>Inspect District Facilities</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       )}

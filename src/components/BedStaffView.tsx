@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
 import { StateData, District, Facility } from '../types';
-import { StateMap } from './StateMap';
-import { DistrictMap } from './DistrictMap';
 import { FacilityReportModal } from './FacilityReportModal';
 import {
   BedDouble,
@@ -24,6 +22,7 @@ import {
   Building2,
   RefreshCw,
   FileText,
+  MapPin,
 } from 'lucide-react';
 
 interface BedStaffViewProps {
@@ -216,24 +215,192 @@ export const BedStaffView: React.FC<BedStaffViewProps> = ({
         </div>
       </div>
 
-      {/* 2. Interactive Map */}
-      {selectedDistrictId && currentDistrict ? (
-        <DistrictMap
-          district={currentDistrict}
-          stateName={currentState.name}
-          selectedFacilityId={selectedFacilityId}
-          onSelectFacility={handleFacilityChange}
-          onOpenFacilityReport={(fac) => setSelectedFacilityForReport(fac)}
-          mode="beds"
-        />
-      ) : (
-        <StateMap
-          stateData={currentState}
-          selectedDistrictId={selectedDistrictId}
-          onSelectDistrict={handleDistrictChange}
-          mode="beds"
-        />
-      )}
+      {/* 2. District & Facility Bed Triage Directory */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-slate-100">
+          <div>
+            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <Building2 className="w-4 h-4 text-indigo-600" />
+              <span>
+                {selectedDistrictId && currentDistrict
+                  ? `${currentDistrict.name} — PHC/CHC Bed & Staff Directory`
+                  : `${currentState.name} — District Bed Capacity & Staff Rosters`}
+              </span>
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {selectedDistrictId && currentDistrict
+                ? `Inspect real-time bed occupancy, ICU reserve, oxygen supply, and biometric doctor duty attendance in ${currentDistrict.name}.`
+                : `Select a district below to inspect individual clinic bed availability and staff attendance.`}
+            </p>
+          </div>
+
+          {selectedDistrictId && (
+            <button
+              onClick={() => handleDistrictChange('')}
+              className="self-start sm:self-auto px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors border border-slate-200 cursor-pointer"
+            >
+              ← Back to All {currentState.name} Districts
+            </button>
+          )}
+        </div>
+
+        {/* If District selected, show its facilities */}
+        {selectedDistrictId && currentDistrict ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+            {currentDistrict.facilities.map((fac) => {
+              const isSelected = selectedFacilityId === fac.id;
+              const totalBeds = fac.beds?.totalBeds || 0;
+              const occupiedBeds = fac.beds?.occupiedBeds || 0;
+              const freeBeds = Math.max(0, totalBeds - occupiedBeds);
+              const bedRate = totalBeds > 0 ? Math.round((occupiedBeds / totalBeds) * 100) : 0;
+              const icuOccupied = fac.beds?.icuBeds?.occupied || 0;
+              const icuTotal = fac.beds?.icuBeds?.total || 0;
+              const oxygenHours = fac.beds?.oxygenSupplyHoursRemaining || 0;
+              const doctorsOnDuty = fac.staff?.doctors?.onDutyToday || 0;
+              const doctorsTotal = fac.staff?.doctors?.totalSanctioned || 0;
+
+              return (
+                <div
+                  key={fac.id}
+                  id={`bed-facility-card-${fac.id}`}
+                  onClick={() => handleFacilityChange(fac.id)}
+                  className={`p-4 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
+                    isSelected
+                      ? 'bg-indigo-50/70 border-indigo-500 ring-2 ring-indigo-500/20 shadow-sm'
+                      : fac.bedAlert
+                      ? 'bg-white border-rose-200 hover:border-rose-400 hover:shadow-sm'
+                      : 'bg-white border-slate-200 hover:border-indigo-300 hover:shadow-sm'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-800 border border-indigo-200">
+                        {fac.type}
+                      </span>
+                      {fac.bedAlert ? (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-200 flex items-center gap-1">
+                          <AlertTriangle className="w-2.5 h-2.5" />
+                          <span>{fac.bedSeverity} Pressure</span>
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                          <CheckCircle2 className="w-2.5 h-2.5" />
+                          <span>{freeBeds} Beds Free</span>
+                        </span>
+                      )}
+                    </div>
+
+                    <h3 className="text-sm font-bold text-slate-900 leading-snug">{fac.name}</h3>
+                    <p className="text-xs text-slate-500 mt-1">Lead: {fac.inchargeDoctor}</p>
+
+                    {/* Bed occupancy bar */}
+                    <div className="mt-3 space-y-1">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-slate-500">Bed Occupancy:</span>
+                        <span className={`font-mono font-bold ${bedRate > 85 ? 'text-rose-600' : 'text-slate-700'}`}>
+                          {bedRate}% ({freeBeds} / {totalBeds} free)
+                        </span>
+                      </div>
+                      <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${
+                            bedRate > 90 ? 'bg-rose-500' : bedRate > 75 ? 'bg-amber-500' : 'bg-emerald-500'
+                          }`}
+                          style={{ width: `${Math.min(bedRate, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mt-3 pt-2 border-t border-slate-100 grid grid-cols-3 gap-1.5 text-center text-xs">
+                      <div className="bg-slate-50 p-1.5 rounded">
+                        <span className="text-[10px] text-slate-400 block">ICU Beds</span>
+                        <span className="font-bold text-slate-700">{icuOccupied}/{icuTotal}</span>
+                      </div>
+                      <div className="bg-slate-50 p-1.5 rounded">
+                        <span className="text-[10px] text-slate-400 block">O₂ Supply</span>
+                        <span className="font-bold text-slate-700">{oxygenHours}h</span>
+                      </div>
+                      <div className="bg-slate-50 p-1.5 rounded">
+                        <span className="text-[10px] text-slate-400 block">MD Duty</span>
+                        <span className="font-bold text-emerald-600">{doctorsOnDuty}/{doctorsTotal}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedFacilityForReport(fac);
+                      }}
+                      className="text-slate-500 hover:text-indigo-600 font-medium flex items-center gap-1 cursor-pointer"
+                    >
+                      <FileText className="w-3 h-3" />
+                      <span>Facility Audit</span>
+                    </button>
+                    <span className={`font-bold flex items-center gap-1 ${isSelected ? 'text-indigo-700' : 'text-indigo-600'}`}>
+                      <span>{isSelected ? 'Active Selection' : 'Inspect Triage'}</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          /* Show all Districts in State */
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+            {currentState.districts.map((dist) => {
+              const hasAlert = dist.bedStressCount > 0;
+              return (
+                <div
+                  key={dist.id}
+                  id={`bed-district-card-${dist.id}`}
+                  onClick={() => handleDistrictChange(dist.id)}
+                  className={`p-4 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
+                    hasAlert
+                      ? 'bg-white border-rose-200 hover:border-rose-400 hover:shadow-sm'
+                      : 'bg-white border-slate-200 hover:border-indigo-300 hover:shadow-sm'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-bold text-slate-800">{dist.name}</span>
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                          hasAlert
+                            ? 'bg-rose-50 text-rose-700 border-rose-200'
+                            : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        }`}
+                      >
+                        {hasAlert ? `${dist.bedStressCount} Overload Alert` : '✓ Capacity Stable'}
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-slate-500 mb-3">HQ: {dist.headquarters}</p>
+
+                    <div className="space-y-1.5 text-xs bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-slate-500">Monitored Facilities:</span>
+                        <span className="font-mono font-bold text-slate-800">{dist.facilities.length} PHCs & CHCs</span>
+                      </div>
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-slate-500">Surplus Status:</span>
+                        <span className="font-medium text-slate-700">{dist.isSurplus ? 'Surplus Reserve Depot' : 'Rural Deficit Network'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-indigo-600">
+                    <span>Inspect District Triage & Roster</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* 3. Facility Detail: Bed Availability & Staff Biometric Grid */}
       {currentFacility && liveBedData && liveStaffData ? (
