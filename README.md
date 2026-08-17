@@ -1,4 +1,4 @@
-# 🩺 PulseIndia — Sovereign Health Intelligence & Resource Orchestration Grid
+# Aurex Health : National Health Supply & Surveillance Grid
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![React 19](https://img.shields.io/badge/React-19.0-61dafb.svg?logo=react)](https://reactjs.org/)
@@ -8,7 +8,7 @@
 [![Privacy Standard](https://img.shields.io/badge/Privacy-DPDP_2023_|_LGPD_|_POPIA-059669.svg)](https://www.meity.gov.in/)
 [![BRICS Cross-Border](https://img.shields.io/badge/Cross--Border-BRICS_Federated_Grid-4f46e5.svg)](#-brics-cross-border-health-grid--privacy-preserving-ai)
 
-> **PulseIndia** is an enterprise-grade, privacy-preserving digital health intelligence platform engineered for real-time surveillance, demand forecasting, and autonomous resource reallocation across primary healthcare networks (PHCs and CHCs). It combines sovereign edge computing, WHO ATC drug harmonization, and zero-leakage cross-border federated learning across BRICS partner health systems.
+> **Aurex Health** is an enterprise-grade, privacy-preserving digital health intelligence platform engineered for real-time surveillance, demand forecasting, and autonomous resource reallocation across primary healthcare networks (PHCs and CHCs). It combines sovereign edge computing, WHO ATC drug harmonization, and zero-leakage cross-border federated learning across BRICS partner health systems.
 
 ---
 
@@ -36,7 +36,7 @@
 
 ## 🏛️ Executive Overview
 
-Rural and sub-district healthcare infrastructure frequently suffers from localized medicine stockouts, uncoordinated bed surges, and delayed epidemic detection. **PulseIndia** addresses these challenges by unifying grassroots telemetry from **Primary Health Centres (PHCs)** and **Community Health Centres (CHCs)** into a single, high-resolution command dashboard.
+Rural and sub-district healthcare infrastructure frequently suffers from localized medicine stockouts, uncoordinated bed surges, and delayed epidemic detection. **Aurex Health** addresses these challenges by unifying grassroots telemetry from **Primary Health Centres (PHCs)** and **Community Health Centres (CHCs)** into a single, high-resolution command dashboard.
 
 ### Core Objectives:
 - **Zero Preventable Stockouts**: Continuous calculation of **Days of Supply (DOS)** and AI burn-rate forecasting for Essential Drug List (EDL) pharmaceuticals.
@@ -61,10 +61,10 @@ Rural and sub-district healthcare infrastructure frequently suffers from localiz
 └──────────────▲──────────────┘└─────────────────────────────┘└─────────────────────────────┘
                │
 ┌──────────────┴───────────────────────────────────────────────────────────────────────────────────┐
-│                                 PULSEINDIA NATIONAL CONTROLLER                                    │
+│                                 AUREX HEALTH NATIONAL CONTROLLER                                 │
 │  ┌────────────────────────────────────────────────────────────────────────────────────────────┐  │
 │  │                            STATE COMMAND & COORDINATION LAYER                              │  │
-│  │   • 36 States & Union Territories (Maharashtra, UP, Bihar, Kerala, Rajasthan, Manipur...)   │  │
+│  │   • 36 States & Union Territories (Maharashtra, UP, Bihar, Kerala, Rajasthan, Manipur...)  │  │
 │  └─────────────────────────────────────────────▲──────────────────────────────────────────────┘  │
 │                                                │                                                 │
 │  ┌─────────────────────────────────────────────┴──────────────────────────────────────────────┐  │
@@ -132,7 +132,7 @@ Rural and sub-district healthcare infrastructure frequently suffers from localiz
 
 ## 🔒 Data Sovereignty & Cryptographic Privacy Architecture
 
-PulseIndia adheres strictly to an absolute **Zero Raw-Data Sharing Policy**. No patient identifiers (ABHA ID, Aadhaar, CPF, National ID), diagnostic histories, or clinical notes ever cross national boundaries.
+AUREX HEALTH adheres strictly to an absolute **Zero Raw-Data Sharing Policy**. No patient identifiers (ABHA ID, Aadhaar, CPF, National ID), diagnostic histories, or clinical notes ever cross national boundaries.
 
 ```text
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
