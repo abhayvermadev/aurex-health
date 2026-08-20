@@ -244,7 +244,7 @@ export const MedicineStockView: React.FC<MedicineStockViewProps> = ({
         </div>
       </div>
 
-      {/* Conditional View: If Facility is selected, show Facility Detail FIRST, followed by District Warehouse Buffer. Otherwise show Warehouse Buffer + Facility Grid */}
+      {/* Conditional View: If Facility is selected, show ONLY that particular PHC / CHC Detail. Otherwise show Warehouse Buffer + Facility Grid */}
       {currentFacility ? (
         <div className="space-y-6">
           {/* 1. Particular PHC / CHC Detail & Medicine Stock Surveillance */}
@@ -530,44 +530,6 @@ export const MedicineStockView: React.FC<MedicineStockViewProps> = ({
                   ))}
                 </div>
               )}
-            </div>
-          )}
-
-          {/* 2. Below: District Central Medical Warehouse Buffer */}
-          {currentDistrict && (
-            <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 mb-4 gap-2">
-                <div className="flex items-center gap-2">
-                  <Warehouse className="w-5 h-5 text-indigo-600" />
-                  <h2 className="text-base font-bold text-slate-900">
-                    {currentDistrict.name} District Central Medical Warehouse Buffer
-                  </h2>
-                </div>
-                <span
-                  className={`text-xs px-2.5 py-0.5 rounded-full font-bold border self-start sm:self-auto ${
-                    currentDistrict.isSurplus
-                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                      : 'bg-amber-50 text-amber-700 border-amber-200'
-                  }`}
-                >
-                  {currentDistrict.isSurplus ? '✓ Surplus District Depot' : '⚠️ Deficit Buffer District'}
-                </span>
-              </div>
-
-              <p className="text-xs text-slate-500 mb-3.5">
-                Central depot buffer reserve at {currentDistrict.headquarters} warehouse for rapid inter-facility restocking across {currentDistrict.name}.
-              </p>
-
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8 gap-2.5 sm:gap-3">
-                {Object.entries(currentDistrict.centralWarehouseInventory).map(([item, qty]) => (
-                  <div key={item} className="bg-slate-50 p-3 rounded-xl border border-slate-200/90 flex flex-col justify-between">
-                    <span className="text-[11px] text-slate-600 font-semibold block leading-tight mb-1.5">{item}</span>
-                    <span className="text-sm sm:text-base font-bold font-mono text-slate-800">
-                      {qty.toLocaleString()} <span className="text-[10px] font-normal text-slate-500">units</span>
-                    </span>
-                  </div>
-                ))}
-              </div>
             </div>
           )}
         </div>

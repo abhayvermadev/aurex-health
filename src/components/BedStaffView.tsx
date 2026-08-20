@@ -215,8 +215,10 @@ export const BedStaffView: React.FC<BedStaffViewProps> = ({
         </div>
       </div>
 
-      {/* 2. District & Facility Bed Triage Directory */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm">
+      {/* 2. District & Facility Bed Triage Directory (Only shown when NO facility is selected) */}
+      {!currentFacility && (
+        <div className="space-y-6">
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-slate-100">
           <div>
             <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
@@ -402,14 +404,75 @@ export const BedStaffView: React.FC<BedStaffViewProps> = ({
         )}
       </div>
 
-      {/* 3. Facility Detail: Bed Availability & Staff Biometric Grid */}
-      {currentFacility && liveBedData && liveStaffData ? (
+      {/* State Clinical Centers Overview if no district is selected */}
+      {!selectedDistrictId && (
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900">
+                {currentState.name} Clinical Centers & Bed Stress Points ({allFacilitiesInState.length} Facilities)
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Click any facility to view bed allocation, admit/discharge patients, and review biometric staff duty attendance.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {allFacilitiesInState.map(({ district, facility }) => {
+              const isAlert = facility.bedAlert;
+              return (
+                <div
+                  key={facility.id}
+                  onClick={() => {
+                    setSelectedDistrictId(district.id);
+                    setSelectedFacilityId(facility.id);
+                  }}
+                  className={`p-4 rounded-xl border transition-all cursor-pointer ${
+                    isAlert
+                      ? 'bg-amber-50/30 border-amber-300 hover:border-amber-400 hover:shadow-md'
+                      : 'bg-white border-slate-200 hover:border-indigo-400 hover:shadow-md'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
+                      {facility.type}
+                    </span>
+                    <span className="text-[10px] font-mono font-bold text-slate-700">
+                      {facility.beds.occupiedBeds}/{facility.beds.totalBeds} Beds ({Math.round((facility.beds.occupiedBeds / facility.beds.totalBeds) * 100)}%)
+                    </span>
+                  </div>
+                  <h4 className="text-xs font-bold text-slate-900 line-clamp-1">{facility.name}</h4>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    {district.name} • {facility.inchargeDoctor}
+                  </p>
+                  <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] font-semibold text-indigo-600">
+                    <span>Inspect Triage & Roster</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  )}
+
+      {/* 3. Facility Detail: Bed Availability & Staff Biometric Grid (Shown ONLY when facility is selected) */}
+      {currentFacility && liveBedData && liveStaffData && (
         <div className="space-y-6">
           {/* Top Status Banner */}
           <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
               <div>
-                <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <button
+                    onClick={() => handleFacilityChange('')}
+                    className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-1 border border-slate-200 transition-colors cursor-pointer"
+                  >
+                    ← Back to {currentDistrict ? `${currentDistrict.name} Directory` : 'District Directory'}
+                  </button>
                   <span className="text-xs font-bold px-2.5 py-1 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200">
                     {currentFacility.type}
                   </span>
@@ -614,57 +677,6 @@ export const BedStaffView: React.FC<BedStaffViewProps> = ({
                 </span>
               </div>
             </div>
-          </div>
-        </div>
-      ) : (
-        /* State Triage Overview */
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-sm font-bold text-slate-900">
-                {currentState.name} Clinical Centers & Bed Stress Points ({allFacilitiesInState.length} Facilities)
-              </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Click any facility to view bed allocation, admit/discharge patients, and review biometric staff duty attendance.
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {allFacilitiesInState.map(({ district, facility }) => {
-              const isAlert = facility.bedAlert;
-              return (
-                <div
-                  key={facility.id}
-                  onClick={() => {
-                    setSelectedDistrictId(district.id);
-                    setSelectedFacilityId(facility.id);
-                  }}
-                  className={`p-4 rounded-xl border transition-all cursor-pointer ${
-                    isAlert
-                      ? 'bg-amber-50/30 border-amber-300 hover:border-amber-400 hover:shadow-md'
-                      : 'bg-white border-slate-200 hover:border-indigo-400 hover:shadow-md'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
-                      {facility.type}
-                    </span>
-                    <span className="text-[10px] font-mono font-bold text-slate-700">
-                      {facility.beds.occupiedBeds}/{facility.beds.totalBeds} Beds ({Math.round((facility.beds.occupiedBeds / facility.beds.totalBeds) * 100)}%)
-                    </span>
-                  </div>
-                  <h4 className="text-xs font-bold text-slate-900 line-clamp-1">{facility.name}</h4>
-                  <p className="text-[11px] text-slate-500 mt-0.5">
-                    {district.name} • {facility.inchargeDoctor}
-                  </p>
-                  <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] font-semibold text-indigo-600">
-                    <span>Inspect Triage & Roster</span>
-                    <ArrowRight className="w-3 h-3" />
-                  </div>
-                </div>
-              );
-            })}
           </div>
         </div>
       )}
