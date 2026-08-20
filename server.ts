@@ -55,47 +55,32 @@ function cleanAndParseJson<T>(rawText: string | undefined, fallback: T): T {
 }
 
 /**
- * Executes a Gemini prompt with automatic model fallback (3.7-flash -> flash-latest -> 3.1-flash-lite)
- * and transient retry handling for 503/429/500 errors.
+ * Executes a Gemini prompt with fast timeout fallback (max 2 seconds).
  */
-async function generateContentWithFallback(prompt: string): Promise<string | null> {
+async function generateContentWithFallback(prompt: string, timeoutMs: number = 2200): Promise<string | null> {
   const ai = getGeminiClient();
   if (!ai) return null;
 
-  const candidateModels = ['gemini-3.7-flash', 'gemini-flash-latest', 'gemini-3.1-flash-lite'];
+  const candidateModels = ['gemini-2.5-flash', 'gemini-3.7-flash'];
 
   for (const model of candidateModels) {
-    for (let attempt = 0; attempt < 2; attempt++) {
-      try {
-        const response = await ai.models.generateContent({
-          model,
-          contents: prompt,
-          config: {
-            responseMimeType: 'application/json',
-          },
-        });
-        if (response.text) {
-          return response.text;
-        }
-      } catch (error: any) {
-        const errMsg = error?.message || String(error);
-        const isTransient =
-          errMsg.includes('503') ||
-          errMsg.includes('UNAVAILABLE') ||
-          errMsg.includes('high demand') ||
-          errMsg.includes('429') ||
-          errMsg.includes('RESOURCE_EXHAUSTED');
+    try {
+      const apiPromise = ai.models.generateContent({
+        model,
+        contents: prompt,
+        config: {
+          responseMimeType: 'application/json',
+        },
+      });
 
-        console.warn(`[Gemini API] Model ${model} (attempt ${attempt + 1}) notice: ${errMsg}`);
+      const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), timeoutMs));
+      const result: any = await Promise.race([apiPromise, timeoutPromise]);
 
-        if (isTransient && attempt === 0) {
-          // Brief backoff before retry or switching model
-          await new Promise((resolve) => setTimeout(resolve, 800));
-          continue;
-        }
-        // Try next candidate model
-        break;
+      if (result && result.text) {
+        return result.text;
       }
+    } catch (error: any) {
+      console.warn(`[Gemini API] Fast notice for ${model}:`, error?.message || error);
     }
   }
   return null;
@@ -112,80 +97,89 @@ async function startServer() {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
-  // AI Demand Forecast Endpoint
+  // AI Demand Forecast Endpoint (Fast 2-3s response with top 4-5 prioritized medicines)
   app.post('/api/ai/forecast-demand', async (req, res) => {
     const { phcName, district, state, medicines = [], footfallTrend, season } = req.body;
 
+    // Filter and prioritize top 4-5 critical or high-burn medicines
+    const sortedMeds = [...medicines].sort((a: any, b: any) => {
+      const aDays = a.daysOfSupplyRemaining ?? (a.currentStock / Math.max(1, a.dailyBurnRate));
+      const bDays = b.daysOfSupplyRemaining ?? (b.currentStock / Math.max(1, b.dailyBurnRate));
+      return aDays - bDays;
+    }).slice(0, 5);
+
     // High quality deterministic domain fallback logic
     const buildDeterministicForecast = () => {
-      const isHighDemand = (m: any) => (m.daysOfSupplyRemaining || 0) < 5 || (m.currentStock || 0) < (m.dailyBurnRate || 10) * 5;
-      const criticalCount = medicines.filter(isHighDemand).length;
-      const calculatedRisk = criticalCount > 2 ? 'CRITICAL' : criticalCount > 0 ? 'HIGH' : 'MODERATE';
+      const isCritical = (m: any) => (m.daysOfSupplyRemaining || 0) < 5 || (m.currentStock || 0) < (m.dailyBurnRate || 10) * 5;
+      const criticalCount = sortedMeds.filter(isCritical).length;
+      const calculatedRisk = criticalCount >= 2 ? 'CRITICAL' : criticalCount > 0 ? 'HIGH' : 'MODERATE';
 
       return {
         success: true,
         isAiGenerated: false,
-        forecastSummary: `Analytical projection for ${phcName || 'PHC'} (${district || 'District'}, ${state || 'State'}): Projected demand surge for essential emergency supplies based on ${season || 'monsoon'} seasonal vector and respiratory patterns.`,
+        forecastSummary: `Projected 30-day demand surge at ${phcName || 'Facility'} driven by ${season || 'seasonal'} vector-borne and fever cases. Immediate restocking recommended for top critical essentials.`,
         riskLevel: calculatedRisk,
-        recommendedAction: `Procure safety buffer from ${district || 'District'} Central Drug Depot. Prioritize IV Fluids (+300 units) and First-Line Antibiotics within 48 hours.`,
-        predictions: medicines.map((m: any) => {
+        recommendedAction: `Restock safety buffer from ${district || 'District'} Central Warehouse. Prioritize top 4 critical medicines within 48h.`,
+        predictions: sortedMeds.map((m: any) => {
           const burn = Math.max(1, m.dailyBurnRate || 10);
           const stock = m.currentStock || 0;
-          const surgeFactor = m.category === 'IV Fluids' || m.category === 'Antibiotics' ? 1.4 : 1.15;
-          const projectedDays = Math.max(1, Math.round(stock / (burn * surgeFactor)));
+          const surgeFactor = m.category === 'IV Fluids' || m.category === 'Antibiotics' ? 1.35 : 1.15;
+          const projectedDays = Math.max(1, Math.round((stock / (burn * surgeFactor)) * 10) / 10);
           const shortfall = Math.max(0, Math.round(burn * 14 - stock));
 
           return {
             name: m.name,
+            category: m.category || 'Essential',
+            currentStock: stock,
             projectedStockoutDays: projectedDays,
             safetyStockShortfall: shortfall,
             confidenceScore: 0.94,
             aiRationale: projectedDays < 5
-              ? `Seasonal footfall surge accelerating burn rate to ${Math.round(burn * surgeFactor)} units/day.`
-              : 'Inventory remains within acceptable NHM buffer margins.',
+              ? `Footfall surge accelerating burn rate to ~${Math.round(burn * surgeFactor)} units/day.`
+              : 'Supply remains within acceptable buffer margins.',
           };
         }),
       };
     };
 
     try {
-      const prompt = `You are a National Health Supply Chain & Epidemiology AI Analyst for Primary Health Centres (PHCs).
-Facility: ${phcName || 'Primary Health Centre'}, District: ${district || 'District'}, State: ${state || 'State'}.
-Current season: ${season || 'Monsoon / High Moisture'}.
-Patient Footfall Trend: ${footfallTrend || '+28% increase over last 14 days'}.
-Medicine Inventory Data:
-${JSON.stringify(medicines, null, 2)}
+      const prompt = `You are an AI Health Supply Chain Analyst for Primary Healthcare Centres.
+Analyze top 4-5 priority medicines for ${phcName || 'PHC'} in ${district || 'District'}, ${state || 'State'}.
+Season: ${season || 'Monsoon Vector Surge'}. Footfall: ${footfallTrend || 'Surging OPD'}.
+Target Medicines:
+${JSON.stringify(sortedMeds.map((m: any) => ({ name: m.name, category: m.category, currentStock: m.currentStock, dailyBurnRate: m.dailyBurnRate, daysOfSupplyRemaining: m.daysOfSupplyRemaining })), null, 2)}
 
-Provide a strict JSON response with:
+Provide a concise JSON response:
 {
-  "forecastSummary": "Concise 2-sentence epidemiological inventory assessment",
-  "riskLevel": "CRITICAL" | "HIGH" | "MODERATE" | "STABLE",
-  "recommendedAction": "Actionable procurement or redistribution recommendation",
+  "forecastSummary": "1-2 lines summarizing epidemiological trend and overall urgency.",
+  "riskLevel": "CRITICAL" | "HIGH" | "MODERATE",
+  "recommendedAction": "1 concise sentence on key replenishment action.",
   "predictions": [
     {
-      "name": "Medicine name",
+      "name": "Medicine Name",
+      "category": "Category",
       "projectedStockoutDays": number,
       "safetyStockShortfall": number,
-      "confidenceScore": number (0.0 to 1.0),
-      "aiRationale": "Brief explanation of surge driver"
+      "confidenceScore": 0.95,
+      "aiRationale": "1 brief sentence reason"
     }
   ]
 }`;
 
-      const aiText = await generateContentWithFallback(prompt);
+      const aiText = await generateContentWithFallback(prompt, 2000);
 
       if (aiText) {
         const parsed = cleanAndParseJson(aiText, null);
-        if (parsed && parsed.predictions) {
+        if (parsed && parsed.predictions && parsed.predictions.length > 0) {
           return res.json({
             success: true,
             isAiGenerated: true,
             ...parsed,
+            predictions: parsed.predictions.slice(0, 5),
           });
         }
       }
 
-      // If AI is busy/unavailable or parsing failed, return high quality fallback
       return res.json(buildDeterministicForecast());
     } catch (error: any) {
       console.error('Error in /api/ai/forecast-demand, returning analytical fallback:', error);
